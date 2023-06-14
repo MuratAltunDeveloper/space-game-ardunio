@@ -1,0 +1,3091 @@
+
+//***************************************************
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <DHT.h>
+#include <Fonts/FreeSerif9pt7b.h>
+
+//7seven segment yapısı
+//ortak katot uclu seven segment display 
+//wokwi ortak anotludur
+//22 b,23 a,24 f,25 g,26 c,27 d,28 e//yesil
+int b=22;
+int a=23;
+int f=24;
+int g=25;
+int c=26;
+int d=27;
+int e=28;
+//2 sevent segment display//pembe
+int b2=30;
+int a2=31;
+int f2=32;
+int g2=33;
+int c2=34;
+int d2=35;
+int e2=36;
+//3 seven segment display//koyumavi
+int b3=37;
+int a3=38;
+int f3=39;
+int g3=40;
+int c3=41;
+int d3=42;
+int e3=43;
+
+int artim=0;
+int artim2;
+int artim3;
+int bak;
+
+
+//EKRANIN GENİSLİK VE YUKSEKLİK
+#define ekrangenislik 128
+#define ekranyukseklik 64
+int LDR_PIN=A0;
+int asagibuton=2;
+int yukaributon=3;
+int onaybuton=4;
+byte menu=0;
+byte menu2=0;
+int giris=0;
+
+//anamenuye geri donmek için kontrol yapısı tasarlıyorum
+int kontrolmenu=0;
+//can ve silah pinleri arturmak azaltmak için yapılar
+int kalp1pin=6;
+int kalp2pin=7;
+int kalp3pin=8;
+
+int silah1pin=11;
+int silah2pin=12;
+int silah3pin=13;
+
+int kalp3pinyan=1;
+int kalp2pinyan=1;
+int kalp1pinyan=1;
+
+
+int silah1pinyan=1;
+int silah2pinyan=1;
+int silah3pinyan=1;
+int arta=0;
+int canhakki=0;
+//buzzzer
+int buzzer=9;
+
+int zorluk1=0;
+int zorluk2=0;
+//potansiyometre kısmı VE ATES BuTON********************************
+int butonvurma=5;
+
+//silahları kontrol et
+
+int silah3kont=20;
+int silah2kont=20;
+int silah1kont=20;
+//her silah icin önceki  potdeger tut
+int eski1potdeger=0;
+int eski2potdeger=0;
+int eski3potdeger=0;
+//silahları adlandır
+int silah1=1;
+int silah2=1;
+int silah3=1;
+int silahhakki=0;
+//kaçkez butona bastım
+int butonabassayisi=1;
+//nesne hareket kopntrolü
+int engelhareket1=1;
+int engelhareket2=1; 
+int engelhareket3=1;
+int engelhareket4=1;
+int engelhareket5=1;
+int engelhareket6=1;
+int engelhareket7=1;
+int engelhareket8=1;
+int engelhareket9=1;
+int engelhareket10=1; 
+int engelhareket11=1;
+int engelhareket12=1;
+int engelhareket13=1;
+int engelhareket14=1;
+int engelhareket15=1;
+int engelhareket16=1;
+//engel hareketlerini tanımla
+int arayuz[16][8];
+int oledmatris[16][8];
+
+int arayuzkay=0;
+int arayuzsifirla=0;
+int ilkgiris=0;
+int oledyenile=0;
+int ata=0;
+//game over 
+int gameover=0;
+int butonbas;
+int sesyap;
+int engel14hakki=0;
+int oncekiengel14hakki=0;
+// LDR Characteristics
+const float GAMMA = 0.7;
+const float RL10 = 50;
+
+//****************************************************
+//silah ve  kalpleri ata
+int kalp1=1;
+int kalp2=1;
+int kalp3=1;
+int odulpuan=0;
+int odulpuancarp=0;
+int snsayac=0;
+//dokunulmazlıkile ilgili işlemler
+int dokunulmazlik3sn=0;
+int dokunulmaz=0;
+int bak3sn=0;
+int dokunulmazlikmatris[5][8];
+
+Adafruit_SSD1306 ekran(ekrangenislik,ekranyukseklik, &Wire, -1);
+
+
+
+
+
+static const unsigned char PROGMEM arac[]=
+{
+0xfc, 0xff, 0xf8, 0xff, 0xf8, 0xff, 0xf8, 0x7f, 0xf8, 0x79, 0xbc, 0x79, 0xa8, 0x7d, 0x88, 0x03, 
+//0x88, 0x03, 0xa8, 0x7d, 0xbc, 0x79, 0xf8, 0x79, 0xf8, 0x7f, 0xf8, 0xff, 0xf8, 0xff, 0xfc, 0xff
+};
+static const unsigned char PROGMEM meteor[]=
+{
+// 'meteor', 16x16px
+0xff,  0x83,  0x83, 0x83, 0x83, 0x83, 0xff,0xff, 0x83, 0x83, 0x83, 0x83, 0x83,0xff, 0x83, 0xff,  0x83,
+//0xff, 0xff, 0xf8, 0xe0, 0xe0, 0xc7, 0xcf, 0x8f,0xe1, 0xc3, 0x83, 0x03, 0x01, 0x01, 0xff, 0xff, 
+};
+static const unsigned char PROGMEM uzaycop[]=
+{
+  
+ 0x98, 0xcf, 0xcf, 0xcf,  0xcf, 0xff,  0xff , 0x98, 0x83,  0x98,  0x98,  0xff, 0xff, 0x98, 0x83, 0x98,
+//0x1b, 0x1b, 0x98, 0xdb, 0xdb, 0x9b, 0x1b, 0x83, 0xcf,0x60, 0x60, 0x6f, 0xcf, 0x9f, 0x3f,  0xff, 
+};
+static const unsigned char PROGMEM yedekcan[]=
+{ 
+0xff,0xff,0xff,0x1f,0x1f,0xff,0xff,0xff,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+};
+static const unsigned char PROGMEM dokunulmaznesne[]=
+{ 
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0xff,0xff,0xff,0xff,0x98,0xff,0xff,0xff,
+};
+
+
+
+
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+if(!ekran.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+//ldr sensoru ayarlama
+
+
+
+ekran.clearDisplay();
+//ekran ozellikleri
+
+
+pinMode(asagibuton,INPUT);
+pinMode(yukaributon,INPUT);
+pinMode(onaybuton,INPUT);
+
+//can vesilah pin çıkıs yap
+pinMode(kalp1pin, OUTPUT);
+pinMode(kalp2pin, OUTPUT);
+pinMode(kalp3pin, OUTPUT);
+
+
+
+pinMode(silah1pin, OUTPUT);
+pinMode(silah2pin, OUTPUT);
+pinMode(silah3pin, OUTPUT);
+
+
+//kalp ve silah için pinler
+//6,7,8 kalp
+//11,12,13se silah
+pinMode(A15, INPUT);
+pinMode(butonvurma,INPUT);
+Serial.begin(115200);
+ pinMode(LDR_PIN, INPUT);
+pinMode(buzzer, OUTPUT);
+
+
+//sevensegmentiçin ayarlama
+pinMode(a, OUTPUT);
+pinMode(b, OUTPUT);
+pinMode(c, OUTPUT);
+pinMode(d, OUTPUT);
+pinMode(e, OUTPUT);
+pinMode(f, OUTPUT);
+pinMode(g, OUTPUT);
+//2
+pinMode(a2, OUTPUT);
+pinMode(b2, OUTPUT);
+pinMode(c2, OUTPUT);
+pinMode(d2, OUTPUT);
+pinMode(e2, OUTPUT);
+pinMode(f2, OUTPUT);
+pinMode(g2, OUTPUT);
+//3
+pinMode(a3, OUTPUT);
+pinMode(b3, OUTPUT);
+pinMode(c3, OUTPUT);
+pinMode(d3, OUTPUT);
+pinMode(e3, OUTPUT);
+pinMode(f3, OUTPUT);
+pinMode(g3, OUTPUT);
+
+
+
+delay(5000);//AYARLAMA SURESİ
+
+//LDR KONTROL
+int analogValue = analogRead(LDR_PIN);
+  float voltage = analogValue / 1024. * 5;
+  float resistance = 2000 * voltage / (1 - voltage / 5);
+  float lux = pow(RL10 * 1e3 * pow(10, GAMMA) / resistance, (1 / GAMMA));
+if(lux>=50)
+{
+  Serial.println(lux);
+  Serial.println("YANDI********************");
+ ekran.invertDisplay(false);
+}
+else
+{
+ Serial.println(lux);
+ Serial.println("SONDU-------------------------------");
+ ekran.invertDisplay(true);
+}
+
+
+
+
+
+
+
+
+
+}
+
+void loop() { 
+
+git:
+
+
+if(kontrolmenu%2==1)
+{
+
+
+
+
+
+
+//bas
+
+kalp1=1;
+ kalp2=1;
+ kalp3=1;
+  odulpuan=0;
+ odulpuancarp=0;
+ snsayac=0;
+ //game over 
+ gameover=0;
+ butonbas=0;
+sesyap=0;
+engel14hakki=0;
+ oncekiengel14hakki=0;
+
+ arayuzkay=0;
+ arayuzsifirla=0;
+ ilkgiris=0;
+oledyenile=0;
+ ata=0;
+  silah3kont=20;
+ silah2kont=20;
+ silah1kont=20;
+//her silah icin önceki  potdeger tut
+eski1potdeger=0;
+ eski2potdeger=0;
+eski3potdeger=0;
+//silahları adlandır
+ silah1=1;
+ silah2=1;
+ silah3=1;
+ silahhakki=0;
+//kaçkez butona bastım
+ butonabassayisi=1;
+ 
+ zorluk1=0;
+ zorluk2=0;
+  kalp3pinyan=1;
+   kalp2pinyan=1;
+ kalp1pinyan=1;
+
+
+ silah1pinyan=1;
+ silah2pinyan=1; 
+  silah3pinyan=1;
+ arta=0;
+  canhakki=0;
+   menu=0;
+ menu2=0;
+ giris=0;
+
+ artim=0;
+ artim2=0;
+ artim3=0;
+ bak;
+
+
+dokunulmazlik3sn=0;
+dokunulmaz=0;
+bak3sn=0;
+
+
+
+
+dokunulmazlikmatrissifirla();
+oledmatrissifirla();
+arayuzsifir();
+//bitis  degerlere yeni tekraradan ata
+
+  kontrolmenu++;//bir daha girmesin diye
+
+}
+
+
+
+
+giris++; 
+
+
+
+
+if(giris==1)
+{
+
+
+
+while(1)
+{
+//ekran özelliklerini belirle
+
+//ekran.setFont(&FreeSerif9pt7b);//font ayarı
+ekran.clearDisplay();//ekranı temizle
+ekran.setTextSize(2);//yazı tipi boyutu1
+ekran.setTextColor(WHITE);//renk beyaz 
+ekran.setCursor(0,0);
+
+
+
+ekran.println("SPACE    ");
+ekran.println("   GAME");
+
+
+
+
+
+
+
+//butonları okuma
+int yukaributonbas=digitalRead(yukaributon);
+int asagibutonbas=digitalRead(asagibuton);
+int onaybutonbas=digitalRead(onaybuton);
+//kalp ve silah yakma
+
+if(yukaributonbas==1)//sagbutona basma durumu
+{
+menu++;
+if(menu>=1)
+{menu=1;}
+
+}
+
+if(asagibutonbas==1)//sol butona basma durumu
+{
+menu--;
+if(menu>=2)
+{
+  menu=0;
+}
+
+
+
+}
+
+if(onaybutonbas==1)
+{
+  if(menu==1)
+  {Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!!!0");
+
+break;
+  }
+  if(menu==0)
+  {
+    Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!1");
+    
+
+
+
+
+
+
+
+
+
+
+// zorluk seviyesini secmewhile(true)
+Serial.println("zORLUK SEViYESiNE GIRDI");
+
+int yukaributonbas;
+int asagibutonbas;
+int onaybutonbas;
+int art=0;
+int oyunabasicin=0;
+
+while(1){
+  
+art++;
+
+yukaributonbas=digitalRead(yukaributon);
+asagibutonbas=digitalRead(asagibuton);
+onaybutonbas=digitalRead(onaybuton);
+if(art==1)
+{
+  onaybutonbas=0;
+
+  delay(500);
+}
+
+
+Serial.println("-------------------------------------------");
+Serial.println("yukaributon2:");
+Serial.println(yukaributonbas);
+Serial.println("asagibuton2:");
+Serial.println(asagibutonbas);
+Serial.println("onaybuton2:");
+Serial.println(onaybutonbas);
+Serial.print("-------->");
+
+
+ekran.clearDisplay();//ekranı temizle
+ekran.setTextSize(2);//yazı tipi boyutu1
+ekran.setTextColor(WHITE);//renk beyaz 
+ekran.setCursor(0,0);
+
+
+
+
+
+
+
+
+if(yukaributonbas==1)//sagbutona basma durumu
+{
+menu2++;
+if(menu2>=1)
+{menu2=1;}
+
+}
+
+if(asagibutonbas==1)//sol butona basma durumu
+{
+menu2--;
+if(menu2>=2)
+{
+  menu2=0;
+}
+
+
+}
+
+if(menu2==0)
+{
+ekran.println("zorluk 1");
+ekran.println(">zorluk 2");
+delay(1);
+}
+else if(menu2==1)
+{
+ekran.println(">zorluk 1");
+ekran.println("zorluk 2");
+delay(1);
+}
+
+if(onaybutonbas==1)//onay butonuna basma
+{
+  if(menu2==1)
+  {Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!!!1 zorluk");
+delay(1);
+zorluk1=1;
+oyunabasicin=1;
+  }
+  if(menu2==0)
+  {
+    Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!2 zorluk");
+   delay(1);
+   zorluk2=1;
+oyunabasicin=1;
+  }
+
+}
+
+if(oyunabasicin==1)
+{
+  int art=0;
+
+Serial.println("GAME");
+ekran.clearDisplay();//ekranı temizle
+ekran.setTextSize(2);//yazı tipi boyutu1
+ekran.setTextColor(WHITE);//renk beyaz 
+ekran.setCursor(0,0);
+ekran.println("Baslat BAS");
+ekran.println(">baslat");
+ekran.println("zorluk");
+art++;
+
+int onay=digitalRead(onaybuton);
+Serial.println("art:");
+Serial.println(art);
+if(art==1)
+{
+  for(int i=0;i<500;i++)
+  {
+
+  }
+
+
+
+}
+if(onay==0)
+{Serial.println("sonsuz dongu");
+delay(1);
+  while(1)
+  {
+   //sonsuz döngü
+//font ve ekran ayarı
+ekran.clearDisplay();//ekranı temizle
+ekran.setTextSize(2);//yazı tipi boyutu1
+ekran.setTextColor(WHITE);//renk beyaz 
+ekran.setCursor(0,0);
+
+
+if(arayuzsifirla<16&&ata==0)
+  {Serial.println("----------------------------------------");
+  delay(10);
+engeluret(gameover);
+  }
+  else
+  {
+  Serial.println("+++++++++++++++++++++++++++++");
+  delay(10);
+    if(ilkgiris==0)//ilkkez girince
+    {    arayuzsifir();
+    oledmatrissifirla();
+    
+     arayuzsifirla=0;
+    }//16 kez girdiginde
+    else
+    { ata++;
+
+      engeluret(gameover);
+     //arayuzsifirla++;//burada ki soruna bak farklı degerler ver
+    }
+   
+  }
+ 
+//ekran.setFont(&FreeSerif9pt7b);//font ayarı
+
+
+//zorluk1 zorluk2 hız kısımları
+int azalt;
+
+if(zorluk1==1)
+{
+azalt=0;
+}
+if(zorluk2==1)//1000 %20 hızlandır
+{
+
+
+if(snsayac/10==0)
+{
+azalt=0;
+}
+if(snsayac/10==1)
+{
+azalt=100;
+}
+if(snsayac/10==2)
+{
+azalt=150;
+}
+if(snsayac/10==3)
+{
+azalt=200;
+}
+if(snsayac/10==4)
+{
+azalt=320;
+}
+if(snsayac/10==5)
+{
+azalt=375;
+}
+if(snsayac/10==6)
+{
+azalt=410;
+}
+if(snsayac/10==7)
+{
+azalt=450;
+}
+
+
+
+
+
+
+}
+
+
+int potdeger=analogRead(A15);
+butonbas=digitalRead(butonvurma);
+  // put your main code here, to run repeatedly:
+
+//0-128arası 
+if(potdeger>=0&&potdeger<128)
+{
+potdeger=1;//1 satır
+
+}
+//128-255
+if(potdeger>=128&&potdeger<255)
+{
+potdeger=2;//2 satır
+
+}
+//255-384
+if(potdeger>=255&&potdeger<384)
+{
+potdeger=3;//3 satır
+
+}
+//384-510
+if(potdeger>=384&&potdeger<=510)
+{
+potdeger=4;//4 satır
+
+}
+//510-638
+if(potdeger>=510&&potdeger<638)
+{
+potdeger=5;//5 satır
+
+}
+//638-776
+if(potdeger>=638&&potdeger<776)
+{
+potdeger=6;//6 satır
+
+}
+//776-894
+if(potdeger>=776&&potdeger<894)
+{
+potdeger=7;//7 satır
+
+}
+//894-1023
+if(potdeger>=894&&potdeger<=1023)
+{
+potdeger=8;//8 satır
+
+}
+
+
+
+//aracın konumalndırılması ile alakalı
+int aracortx=0;
+int aracorty=(potdeger*8)-8;
+
+
+Serial.println(potdeger);
+
+if(butonbas==1)//butona basılınca atesler
+{
+
+Serial.println("ATES");
+
+
+if(butonabassayisi%3==1&&silah3pinyan==1)
+{
+silah3=0;
+silah3kont=0;
+eski3potdeger=potdeger;
+Serial.print("silah3");
+Serial.println("sifirlandi");
+silah3pinyan=0;
+}
+if(butonabassayisi%3==2&&silah2pinyan==1)
+{
+silah2=0;
+silah2kont=0;
+eski2potdeger=potdeger;
+Serial.print("silah2");
+Serial.println("sifirlandi");
+silah2pinyan=0;
+}
+if(butonabassayisi%3==0&&silah1pinyan==1)
+{
+silah1=0;
+silah1kont=0;
+eski1potdeger=potdeger;
+Serial.print("silah1");
+Serial.println("sifirlandi");
+silah1pinyan=0;
+}
+butonabassayisi++;
+}
+
+
+
+
+
+
+int silah3x=0,silah3y=0,silah2x=0,silah2y=0,silah1x=0,silah1y=0;
+//ekran.drawCircle(4,potdeger*7,2,SSD1306_WHITE);
+
+ekran.drawBitmap(0,(potdeger*8)-8,arac,8,8,SSD1306_WHITE);
+
+
+//silah3 atesle
+if(silah3kont<=16)
+{
+   silah3x=8*silah3kont;
+   silah3y=(eski3potdeger*8)-4;
+
+ekran.drawFastHLine(silah3x,silah3y,8,SSD1306_WHITE);
+}
+
+//silah2 atesle
+if(silah2kont<=16)
+{
+ silah2x=8*silah2kont;
+ silah2y=(eski2potdeger*8)-4;
+
+ekran.drawFastHLine(silah2x,silah2y,8,SSD1306_WHITE);
+}
+
+//silah1 atesle
+if(silah1kont<=16)
+{
+ silah1x=8*silah1kont;
+ silah1y=(eski1potdeger*8)-4;
+
+ekran.drawFastHLine(silah1x,silah1y,8,SSD1306_WHITE);
+}
+silah3kont++;
+silah2kont++;
+silah1kont++;
+
+
+
+if(engelhareket1==1)
+{
+  bak++;
+
+delay(1);
+}
+
+
+
+
+if(engelhareket1==1){
+snsayac++;
+for(int i=0;i<8;i++)
+    {
+
+
+
+if(oledmatris[0][i]==1)
+           {
+
+
+
+
+int kontdeger=(arayuzsifirla+1);
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata;
+}
+
+if(ata>16)
+{Serial.println("//////////////////////////////////////////////////////////////////////");
+  Serial.println(kontdeger);
+  
+  kontdeger=ata-16;
+}
+
+
+
+Serial.print("hareket               ");
+
+Serial.println(kontdeger);
+
+Serial.println("ata:");
+Serial.println(ata);
+Serial.println("\n\n");
+
+
+if(kontdeger+arta==14)
+{
+  
+
+//sonuk yakma
+arta=16-kontdeger;
+
+
+
+int birkez2=0;
+if(silah1pinyan==0&&birkez2==0)
+{
+  birkez2++;
+  silah1pinyan=1;
+}
+if(silah2pinyan==0&&birkez2==0)
+{
+  birkez2++;
+  silah2pinyan=1;
+}
+if(silah3pinyan==0&&birkez2==0)
+{
+  birkez2++;
+  silah3pinyan=1;
+}
+
+
+if(silah1pinyan==1&&silah2pinyan==1&&silah3pinyan==1)
+{
+  silahhakki++;
+}
+
+
+
+
+
+Serial.print("++...++...++...++...++");
+Serial.println(kontdeger+arta);
+
+ int birkez=0;
+   if(kalp1pinyan==0&&birkez==0)
+  {kalp1pinyan=1;
+  
+  birkez++;
+  }  if(kalp2pinyan==0&&birkez==0)
+  {birkez++;
+   kalp2pinyan=1;
+  
+  }
+ if(kalp3pinyan==0&&birkez==0)
+  {birkez++;
+    kalp3pinyan=1;
+   
+  }
+
+if(kalp1pinyan==1&&kalp2pinyan==1&&kalp3pinyan==1)
+{
+  canhakki++;
+}
+
+
+
+}
+
+digitalWrite(kalp1pin,kalp1pinyan);
+digitalWrite(kalp2pin,kalp2pinyan);
+digitalWrite(kalp3pin,kalp3pinyan);
+
+digitalWrite(silah1pin,silah1pinyan);
+digitalWrite(silah2pin,silah2pinyan);
+digitalWrite(silah3pin,silah3pinyan);
+
+
+
+
+int kayhiz=400-azalt;
+delay(kayhiz);
+if(i==7)
+{
+  odulpuancarp=1;
+}
+if(i==4)
+{
+  dokunulmazlik3sn=1;
+}
+dokunulmazlikmatris[0][4]=1;
+
+
+dokunulmazlikal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),0);
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0&&i!=4)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+engel14hakki++;
+             }
+             else if(i%2==1&&i!=7)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+        engel14hakki++;
+             }
+          else if(i==7)
+          {
+            ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),yedekcan,8,8,SSD1306_WHITE);
+engel14hakki++;
+          }else if(i==4)
+{
+   ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),dokunulmaznesne,8,8,SSD1306_WHITE);
+engel14hakki++;
+}
+
+           }  
+    }
+}
+if(engelhareket2==1)
+{
+for(int i=0;i<8;i++)
+    {
+if(oledmatris[1][i]==1)
+           {
+
+
+
+
+
+int kontdeger=(arayuzsifirla-1+1);
+
+
+
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-1;
+}
+if(ata>17)
+{
+  kontdeger=ata-17;
+}
+
+
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),1);
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+          //   engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+          //  engel14hakki++;
+             }
+
+
+
+
+
+
+           }  
+    }
+}
+if(engelhareket3==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[2][i]==1)
+           {
+
+
+
+
+
+int kontdeger=(arayuzsifirla-2+1);
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-2;
+}
+if(ata>18)
+{
+  kontdeger=ata-18;
+}
+
+
+if(i==6)
+{
+odulpuancarp=1;
+}
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),2);
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0&&i!=6)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+        //   engel14hakki++;
+             }
+             else if(i%2==1)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+       //   engel14hakki++;
+             }
+
+     else if(i==6)
+          {
+            ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),yedekcan,8,8,SSD1306_WHITE);
+engel14hakki++;
+          }
+
+
+
+           }  
+    }
+
+}
+if(engelhareket4==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[3][i]==1)
+           {
+
+
+
+int kontdeger=(arayuzsifirla-3+1);
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-3;
+}
+
+
+if(ata>19)
+{
+  kontdeger=ata-19;
+}
+
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),3);
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+        //   engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+       //    engel14hakki++;
+             }
+
+
+
+
+
+
+           }  
+    }
+
+}
+if(engelhareket5==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[4][i]==1)
+           {
+
+int kontdeger=(arayuzsifirla-4+1);
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-4;
+}
+
+if(ata>20)
+{
+  kontdeger=ata-20;
+}
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),4);
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+     //       engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+    //     engel14hakki++;
+             }
+
+
+
+           }  
+    }
+
+}
+if(engelhareket6==1)
+{
+for(int i=0;i<8;i++)
+    {
+if(oledmatris[5][i]==1)
+           {
+             
+             int kontdeger=(arayuzsifirla-5+1);
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-5;
+}
+
+if(ata>21)
+{
+  kontdeger=ata-21;
+}
+if(i==7)
+{
+  odulpuancarp=1;
+}
+if(i==5)
+{
+  dokunulmazlik3sn=1;
+}
+
+dokunulmazlikmatris[1][5]=1;
+
+Serial.print("                                                i:::::   ");
+Serial.println(i);
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),5);
+dokunulmazlikal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+       ///    engel14hakki++;
+             }
+             else if(i%2==1&&i!=7&&i!=5)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+   //engel14hakki;   
+     }
+
+   else if(i==7)
+          {
+            ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),yedekcan,8,8,SSD1306_WHITE);
+engel14hakki++;
+          }
+          else if(i==5)
+{ ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),dokunulmaznesne,8,8,SSD1306_WHITE);
+engel14hakki++;
+
+}
+
+           }  
+    }
+}
+if(engelhareket7==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[6][i]==1)
+           {
+             
+             int kontdeger=(arayuzsifirla-6+1);
+
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-6;
+}
+
+
+if(ata>22)
+{
+  kontdeger=ata-22;
+}
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),6);
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+           // engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+         // engel14hakki++;
+             }
+
+
+
+           }  
+    }
+
+}
+if(engelhareket8==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[7][i]==1)
+           {
+             
+             
+             int kontdeger=(arayuzsifirla-7+1);
+
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-7;
+}
+
+
+if(ata>23)
+{
+  kontdeger=ata-23;
+}
+if(i==5)
+{
+  dokunulmazlik3sn=1;
+}
+dokunulmazlikmatris[2][5]=1;
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),7);
+dokunulmazlikal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+         //   engel14hakki++;
+             }
+             else if(i%2==1&&i!=5)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+        //     engel14hakki++;
+             }
+else if(i==5)
+{ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),dokunulmaznesne,8,8,SSD1306_WHITE);
+        //     engel14hakki++;
+  
+
+}
+          
+
+           }  
+    }
+
+}
+if(engelhareket9==1){
+for(int i=0;i<8;i++)
+    {
+if(oledmatris[8][i]==1)
+           {
+             int kontdeger=(arayuzsifirla-8+1);
+
+
+
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-8;
+}
+
+
+if(ata>24)
+{
+  kontdeger=ata-24;
+}
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),8);
+
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+           //  engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+          //   engel14hakki++;
+             }
+
+    
+
+           }  
+    }
+}
+if(engelhareket10==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[9][i]==1)
+           {
+             
+             
+
+
+int kontdeger=(arayuzsifirla-9+1);
+
+
+
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-9;
+}
+
+if(ata>25)
+{
+  kontdeger=ata-25;
+}
+if(i==6)
+{
+  odulpuancarp=1;
+}
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),9);
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+             if(i%2==0&&i!=6)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+         //    engel14hakki++;
+             }
+             else if(i%2==1)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+         //   engel14hakki++;
+             }
+     else if(i==6)
+          {
+            ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),yedekcan,8,8,SSD1306_WHITE);
+engel14hakki++;
+          }
+
+
+
+           }  
+    }
+
+}
+if(engelhareket11==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[10][i]==1)
+           {
+             
+             int kontdeger=(arayuzsifirla-10+1);
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-10;
+}
+
+
+
+if(ata>26)
+{
+  kontdeger=ata-26;
+}
+if(i==2)
+{
+  dokunulmazlik3sn=1;
+}
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),10);
+
+dokunulmazlikmatris[3][2]==1;
+
+dokunulmazlikal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));          
+             if(i%2==0&&i!=2)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+       //      engel14hakki++;
+             }
+             else if(i%2==1)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+        //    engel14hakki++;
+             }
+      else if(i==2)
+      {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),dokunulmaznesne,8,8,SSD1306_WHITE);
+        //    engel14hakki++;
+
+      }
+
+
+           }  
+    }
+
+}
+if(engelhareket12==1)
+{
+for(int i=0;i<8;i++)
+    {
+if(oledmatris[11][i]==1)
+           {
+
+
+int kontdeger=(arayuzsifirla-11+1);
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-11;
+}
+
+
+if(ata>27)
+{
+  kontdeger=ata-27;
+}
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),11);
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+       //      engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+      //     engel14hakki++;
+             }
+
+
+
+
+
+
+
+
+
+
+
+           }  
+    }
+}
+if(engelhareket13==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[12][i]==1)
+           {
+
+
+int kontdeger=(arayuzsifirla-12+1);
+
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-12;
+}
+
+if(ata>28)
+{
+  kontdeger=ata-28;
+}
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),12);
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+      //     engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+  //         engel14hakki++;
+             }
+
+
+
+           }  
+    }
+
+}
+if(engelhareket14==1)
+{
+for(int i=0;i<8;i++)
+    {
+if(oledmatris[13][i]==1)
+           {
+             
+             int kontdeger=(arayuzsifirla-13+1);
+
+
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-13;
+}
+
+
+if(ata>29)
+{
+  kontdeger=ata-29;
+}
+
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),13);
+
+
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+      //     engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+      //     engel14hakki++;
+             }
+
+             
+        
+
+
+           }  
+    }
+}
+if(engelhareket15==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[14][i]==1)
+           {
+             
+             
+             
+             int kontdeger=(arayuzsifirla-14+1);
+
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-14;
+}
+
+
+if(ata>30)
+{
+  kontdeger=ata-30;
+}
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),14);
+
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+    //      engel14hakki++;
+             }
+             else
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+    //       engel14hakki++;
+             }
+
+             
+             
+             
+
+
+
+           }  
+    }
+
+}
+if(engelhareket16==1)
+{for(int i=0;i<8;i++)
+    {
+if(oledmatris[15][i]==1)
+           {
+
+int kontdeger=(arayuzsifirla-15+1);
+
+
+
+if(kontdeger>16)
+{
+  kontdeger=ata-15;
+}
+
+if(ata>31)
+{
+  kontdeger=ata-31;
+}
+if(i==3)
+{
+  dokunulmazlik3sn=1;
+}
+
+yoket(silah3x,silah3y,silah2x,silah2y,silah1x,silah1y,((16*8)-(8*kontdeger)),(8*i),15);
+
+
+dokunulmazlikmatris[4][3]=1;
+
+dokunulmazlikal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+
+carptimi(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+odulpuanal(aracortx,aracorty,((16*8)-(8*kontdeger)),(8*i));
+             if(i%2==0)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),meteor,8,8,SSD1306_WHITE);
+    //     engel14hakki++;
+             }
+             else if(i%2==1&&i!=3)
+             {
+ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),uzaycop,8,8,SSD1306_WHITE);
+   //    engel14hakki++;
+             }else if(i==3)
+{
+ ekran.drawBitmap(((16*8)-(8*kontdeger)),(8*i),dokunulmaznesne,8,8,SSD1306_WHITE);
+   //    engel14hakki++;
+  
+}
+
+
+
+           }  
+    }
+
+}
+
+//silah yakma ates edip sondurme
+
+//kalp yakma can alma ve verme için
+if(silah3pinyan==0||silah2pinyan==0||silah1pinyan==0)
+{
+
+//silahakki
+if(silahhakki>0)
+{
+
+if(silah1pinyan==0)
+{
+  silah1pinyan=1;
+silahhakki--;
+}
+if(silah2pinyan==0)
+{
+silahhakki--;
+silah2pinyan=1;
+}
+if(silah3pinyan==0)
+{
+  silah3pinyan=1;
+  silahhakki--;
+}
+
+
+
+}
+
+digitalWrite(silah1pin,silah1pinyan);
+digitalWrite(silah2pin,silah2pinyan);
+digitalWrite(silah3pin,silah3pinyan);
+
+}
+
+
+
+
+
+//kalp yakma can alma ve verme için
+if(kalp3pinyan==0||kalp2pinyan==0||kalp1pinyan==0)
+{
+
+//kalpim yakılmış olabilir veya daha onceden canhakkkı gelmiş olabilir
+if(canhakki>0)
+{
+
+if(kalp1pinyan==0)
+{
+  kalp1pinyan=1;
+canhakki--;
+}
+if(kalp2pinyan==0)
+{
+canhakki--;
+  kalp2pinyan=1;
+}
+if(kalp3pinyan==0)
+{
+  kalp3pinyan=1;
+  canhakki--;
+}
+
+
+
+}
+
+digitalWrite(kalp1pin,kalp1pinyan);
+digitalWrite(kalp2pin,kalp2pinyan);
+digitalWrite(kalp3pin,kalp3pinyan);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Serial.println("bak");
+Serial.println(bak);
+if(bak<10)
+  {
+    artim=bak;
+    sevensegment();
+  }
+  if(bak>10&&bak<100)
+  {
+    artim=bak/10;
+    artim2=bak%10;
+    sevensegment();
+    
+  }
+if(bak>100)
+{
+
+  artim=(bak/100)%10;
+  artim2=(bak/10)%10;
+  artim3=bak%10;
+sevensegment();
+}
+Serial.print("ses:                                             ");
+Serial.println(sesyap);
+     if(dokunulmaz==1)
+{
+  bak3sn++;
+}
+if(bak3sn==3)
+{
+  dokunulmaz=0;
+  bak3sn=0;
+}
+
+  if(sesyap==1)
+  {Serial.println("caldı");
+    tone(buzzer,200); 
+    delay(1000-azalt);
+
+
+  }
+  sesyap=0;
+  if(sesyap==0)
+  {
+      noTone(buzzer);
+  }
+ekran.display();
+arayuzsifirla++;
+ilkgiris++;
+if(kalp1pinyan==0&&kalp2pinyan==0&&kalp3pinyan==0&&silah1pinyan==0&&silah2pinyan==0&&silah3pinyan==0)
+{bak=0;
+  kontrolmenu++;
+   kaybetmeekran();
+   delay(2000);
+   goto git;
+}
+
+/*ekran.clearDisplay();
+int butonbas=digitalRead(buton);
+Serial.print("buton basma:");
+Serial.println(butonbas);
+
+
+int potdeger=analogRead(A0);
+
+  // put your main code here, to run repeatedly:
+
+//0-255arası 
+if(potdeger>=0&&potdeger<255)
+{
+potdeger=1;//1 satır
+
+}
+//255-510
+if(potdeger>=255&&potdeger<510)
+{
+potdeger=2;//2 satır
+
+}
+//510-765
+if(potdeger>=510&&potdeger<765)
+{
+potdeger=3;//3 satır
+
+}
+//765-1023
+if(potdeger>=765&&potdeger<=1023)
+{
+potdeger=4;//4 satır
+
+}
+
+Serial.println(potdeger);
+
+if(butonbas==1)//butona basılınca atesler
+{
+
+
+
+if(butonabassayisi%4==1&&silah3==1)
+{
+silah3=0;
+silah3kont=0;
+eski3potdeger=potdeger;
+Serial.print("silah3");
+Serial.println("sifirlandi");
+}
+if(butonabassayisi%4==2&&silah2==1)
+{
+silah2=0;
+silah2kont=0;
+eski2potdeger=potdeger;
+Serial.print("silah2");
+Serial.println("sifirlandi");
+}
+if(butonabassayisi%4==3&&silah1==1)
+{
+silah1=0;
+silah1kont=0;
+eski1potdeger=potdeger;
+Serial.print("silah1");
+Serial.println("sifirlandi");
+}
+butonabassayisi++;
+}
+
+
+
+
+
+
+//ekran.drawCircle(4,potdeger*7,2,SSD1306_WHITE);
+
+ekran.drawBitmap(0,(potdeger*16)-15,arac,8,8,SSD1306_WHITE);
+ekran.drawBitmap(engelhareket1*8,10,meteor,8,8,SSD1306_WHITE);
+ekran.drawBitmap(engelhareket1*8,40,uzaycop,8,8,SSD1306_WHITE);
+
+//silah3 atesle
+if(silah3kont<=8)
+{
+ekran.drawFastHLine(17*silah3kont,(eski3potdeger*16)-4,8,SSD1306_WHITE);
+}
+
+//silah2 atesle
+if(silah2kont<=8)
+{
+ekran.drawFastHLine(17*silah2kont,(eski2potdeger*16)-4,8,SSD1306_WHITE);
+}
+
+//silah1 atesle
+if(silah1kont<=8)
+{
+ekran.drawFastHLine(17*silah1kont,(eski1potdeger*16)-4,8,SSD1306_WHITE);
+}
+delay(1000);
+ekran.display();
+silah3kont++;
+silah2kont++;
+silah1kont++;
+
+
+engelhareket1--;
+engelhareket2--;
+engelhareket3--;
+engelhareket4--;
+engelhareket5--;
+engelhareket6--;
+engelhareket7--;
+engelhareket8--;
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+  }
+}
+
+//oyun için sonsuz döngü
+delay(10);
+}
+
+
+ekran.display();
+Serial.println("menu2=");
+Serial.println(menu2);
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Serial.println("ZORLUK SEVIYESINDEN CIKTI");
+
+
+
+
+
+
+
+
+
+
+  }
+}
+
+
+
+
+
+if(menu==0)
+{
+ekran.println("baslat");
+ekran.println(">zorluk");
+}
+else if(menu==1)
+{
+ekran.println(">baslat");
+ekran.println("zorluk");
+}
+
+
+ 
+ekran.display();
+Serial.println("yukaributonbasma:");
+Serial.println(yukaributonbas);
+Serial.println("asagibutonbasma:");
+Serial.println(asagibutonbas);
+Serial.println("onaybutonbasma:");
+Serial.println(onaybutonbas);
+Serial.print("-------->");
+Serial.println(menu);
+}
+
+}
+Serial.println("=====");
+Serial.println(giris);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+void engeluret(int kaybetme)
+{ int kontrolet=0;
+if(kaybetme==1)
+{
+kaybetmeekran();
+}
+if(kaybetme!=1)
+{
+
+
+int randomnesne=-10;
+int randomnesne2=-10;
+int randomnesne3=-10;
+int randomnesne4=-10;
+
+
+ randomnesne=random(0,8);
+ randomnesne2=random(0,8);
+while(1)
+{Serial.println("iki");
+  if(randomnesne2==(randomnesne-1)||randomnesne2==randomnesne)
+  {
+randomnesne2=random(0,8);
+
+  }
+   if(randomnesne2==(randomnesne+1))
+  {
+ randomnesne2=random(0,8);   
+  }
+  if(randomnesne2!=(randomnesne+1)&&randomnesne2!=(randomnesne-1)&&randomnesne2!=randomnesne)
+  {
+    break;
+  }
+}
+randomnesne3=random(0,8);
+while(1)
+{Serial.println("üc");
+
+  if(randomnesne3==(randomnesne-1)||randomnesne3==(randomnesne2-1)||randomnesne3==randomnesne2||randomnesne3==randomnesne)
+  {
+randomnesne3=random(0,8);
+
+  }
+  if(randomnesne3==(randomnesne+1)||randomnesne3==(randomnesne2+1))
+  {
+randomnesne3=random(0,8);
+
+  }
+ if(randomnesne3!=(randomnesne+1)&&randomnesne3!=(randomnesne2+1)&&randomnesne3!=(randomnesne-1)&&randomnesne3!=(randomnesne2-1)&&randomnesne3!=randomnesne2&&randomnesne3!=randomnesne)
+  {
+break;
+
+  }
+
+
+}
+randomnesne4=random(0,8);
+while(1)
+{Serial.println("dört");
+
+
+
+
+
+  if(randomnesne4==(randomnesne-1)||randomnesne4==(randomnesne2-1)||randomnesne4==(randomnesne3-1)||randomnesne4==randomnesne3||randomnesne4==randomnesne2||randomnesne4==randomnesne)
+  {
+randomnesne4=random(0,8);
+
+  }
+    if(randomnesne4==(randomnesne+1)||randomnesne4==(randomnesne2+1)||randomnesne4==(randomnesne3+1))
+  {
+randomnesne4=random(0,8);
+
+  }
+  if(randomnesne4!=(randomnesne+1)&&randomnesne4!=(randomnesne2+1)&&randomnesne4!=(randomnesne3+1)&&randomnesne4!=(randomnesne-1)&&(randomnesne4!=(randomnesne2-1)||randomnesne4!=(randomnesne3-1))&&randomnesne4!=randomnesne3&&randomnesne4!=randomnesne2&&randomnesne4!=randomnesne)
+  {
+break;
+
+  }
+
+}
+
+Serial.println(" \n\n\n");
+//delay(1000);
+Serial.println(randomnesne);
+Serial.println(randomnesne2);
+Serial.println(randomnesne3);
+Serial.println(randomnesne4);
+
+
+if(randomnesne==0&&randomnesne2==5&&randomnesne3==3&&randomnesne4==2)
+{
+  kontrolet=1;
+}
+
+
+
+/*
+for(int i=0;i<8;i++)
+{
+
+if(i==randomnesne||i==randomnesne2||i==randomnesne3||i==randomnesne4)
+{
+Serial.print("*");
+}else
+{
+  Serial.print("-");
+}
+
+}
+
+*/
+
+
+for(int i=0;i<8;i++)
+{
+  if(i==randomnesne)
+  {
+arayuz[arayuzkay][i]=1;
+  }
+  if(i==randomnesne2)
+  {
+arayuz[arayuzkay][i]=1;
+  }
+  if(i==randomnesne3)
+  {
+arayuz[arayuzkay][i]=1;
+  }
+ if(i==randomnesne4)
+  {
+arayuz[arayuzkay][i]=1;
+  }
+
+}
+
+
+//optimize etttim 
+ 
+if(zorluk2==1)
+{
+arayuz[0][0]=1;
+arayuz[0][1]=0;
+arayuz[0][2]=1;
+arayuz[0][3]=0;
+arayuz[0][4]=1;
+arayuz[0][7]=1;
+arayuz[1][4]=1;
+arayuz[1][5]=0;
+}
+
+
+
+
+
+//kodlarda
+//ıolan seye 
+//tekrar bakarsın
+
+
+
+  for(int i=0;i<8;i++)
+{
+  Serial.print(arayuz[arayuzkay][i]);
+ int temp=arayuz[arayuzkay][i];  
+ if(ata==0)
+  {
+ oledmatris[arayuzkay][i]=temp;
+  }
+  else{
+//ilk oled doldumu
+  // oledmatris[15][i]=temp;
+  }
+
+}Serial.println();
+  
+
+
+delay(10);
+
+if(arayuzkay==15)
+{oledyenile++;
+ //Serial.println("arayuzkay=15");
+  arayuzkay=0;
+  deneme();
+  
+}else
+{
+  arayuzkay++;
+  deneme();
+}
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+}
+void kaybetmeekran()
+{
+
+//ekran.setFont(&FreeSerif9pt7b);//font ayarı
+ekran.clearDisplay();//ekranı temizle
+ekran.setTextSize(2);//yazı tipi boyutu1
+ekran.setTextColor(WHITE);//renk beyaz 
+ekran.setCursor(0,0);
+ekran.println("GAME");
+ekran.println("    OVER");
+}
+void arayuzsifir()
+{
+
+for(int i=0;i<16;i++)
+{
+  for(int j=0;j<8;j++)
+  {
+    arayuz[i][j]=0;
+  }
+}
+
+}
+
+
+void deneme()
+{Serial.println("\n\t\n");
+Serial.println("tablo\n");
+
+for(int i=0;i<16;i++)
+{
+  for(int j=0;j<8;j++)
+  {
+Serial.print(oledmatris[i][j]);
+
+  }Serial.println();
+}
+
+
+}
+
+void oledmatrissifirla()
+{
+
+  for(int i=0;i<16;i++)
+{
+  for(int j=0;j<8;j++)
+  {
+   oledmatris[i][j]=0;
+  }
+}
+}
+
+
+void oledyenilefonkbassatir()
+{
+
+
+  for(int i=0;i<16;i++)
+  {
+for(int j=0;j<8;j++)
+{
+//oledmatris[0][j]=0;
+
+}
+  }
+
+}
+
+void yoket(int s3x,int s3y,int s2x,int s2y,int s1x,int s1y,int cisimx,int cisimy,int satir)
+{Serial.println("yoket");
+
+if(s3x==cisimx&&(s3y>=cisimy&&s3y<=cisimy+8))
+{
+   oledmatris[(satir)][(cisimy)/8]=0;
+   silah3kont=17;
+}
+if(s2x==cisimx&&(s2y>=cisimy&&s2y<=cisimy+8))
+{
+  oledmatris[(satir)][(cisimy)/8]=0;
+  silah2kont=17;
+}
+if(s1x==cisimx&&(s1y>=cisimy&&s1y<=cisimy+8))
+{
+  oledmatris[(satir)][(cisimy)/8]=0;
+silah1kont=17;
+}
+
+/*
+for(int i=0;i<16;i++)
+{
+for(int j=0;j<8;j++)
+{
+  if(oledmatris[i][j]==1)
+  {
+if(i%2==0)
+{
+  //meteor
+if(cisimx==s3x)
+{
+if(s3y==cisimy-3)
+{
+  //S
+  Serial.println("vur");
+  delay(3);
+}
+
+}
+if(cisimx==s2x)
+{
+  if(s2y==cisimy-3)
+  {//
+  Serial.println("vur");
+  delay(3);
+  }
+
+}
+if(cisimx==s1x)
+{
+if(s1y==cisimy-3)
+{
+  //
+    Serial.println("vur");
+  delay(3);
+}
+}
+
+}else
+{
+  //coptur
+
+if(cisimx==s3x)
+{
+if(s3y==cisimy-3)
+{
+  //S
+  Serial.println("vur");
+  delay(3);
+}
+
+}
+if(cisimx==s2x)
+{
+  if(s2y==cisimy-3)
+  {//
+  Serial.println("vur");
+  delay(3);
+  }
+
+}
+if(cisimx==s1x)
+{
+if(s1y==cisimy-3)
+{
+  //
+    Serial.println("vur");
+  delay(3);
+}
+}
+
+
+
+
+
+}
+
+  }
+
+
+}
+}
+*/
+
+
+
+
+}
+
+void sevensegment()
+{
+
+
+
+if(artim==0)
+{
+digitalWrite(a,0);
+digitalWrite(b,0);
+digitalWrite(c,0);
+digitalWrite(d,0);
+digitalWrite(e,0);
+digitalWrite(f,0);
+digitalWrite(g,1);
+delay(2);
+}
+if(artim==1)
+{
+digitalWrite(a,1);
+digitalWrite(b,0);
+digitalWrite(c,0);
+digitalWrite(d,1);
+digitalWrite(e,1);
+digitalWrite(f,1);
+digitalWrite(g,1);
+delay(2);
+}
+if(artim==2)
+{
+digitalWrite(a,0);
+digitalWrite(b,0);
+digitalWrite(c,1);
+digitalWrite(d,0);
+digitalWrite(e,0);
+digitalWrite(g,0);
+digitalWrite(f,1);
+delay(2);
+}
+if(artim==3)
+{
+digitalWrite(a,0);
+digitalWrite(b,0);
+digitalWrite(c,0);
+digitalWrite(d,0);
+digitalWrite(e,1);
+digitalWrite(f,1);
+digitalWrite(g,0);
+delay(2);
+}
+if(artim==4)
+{
+digitalWrite(a,1);
+digitalWrite(b,0);
+digitalWrite(c,0);
+digitalWrite(d,1);
+digitalWrite(e,1);
+digitalWrite(f,0);
+digitalWrite(g,0);
+delay(2);
+}
+if(artim==5)
+{digitalWrite(a,0);
+digitalWrite(b,1);
+digitalWrite(c,0);
+digitalWrite(d,0);
+digitalWrite(e,1);
+digitalWrite(f,0);
+digitalWrite(g,0);
+
+delay(2);
+}
+if(artim==6)
+{
+digitalWrite(a,0);
+digitalWrite(b,1);
+digitalWrite(c,0);
+digitalWrite(d,0);
+digitalWrite(e,0);
+digitalWrite(f,0);
+digitalWrite(g,0);
+delay(20);
+}
+if(artim==7)
+{
+digitalWrite(a,0);
+digitalWrite(b,0);
+digitalWrite(c,0);
+digitalWrite(d,1);
+digitalWrite(e,1);
+digitalWrite(f,1);
+digitalWrite(g,1);
+delay(2);
+}
+if(artim==8)
+{
+digitalWrite(a,0);
+digitalWrite(b,0);
+digitalWrite(c,0);
+digitalWrite(d,0);
+digitalWrite(e,0);
+digitalWrite(f,0);
+digitalWrite(g,0);
+delay(2);
+}
+if(artim==9)
+{
+digitalWrite(a,0);
+digitalWrite(b,0);
+digitalWrite(c,0);
+digitalWrite(d,0);
+digitalWrite(e,1);
+digitalWrite(f,0);
+digitalWrite(g,0);
+delay(20);
+}
+
+if(artim2==0)
+{
+digitalWrite(a2,0);
+digitalWrite(b2,0);
+digitalWrite(c2,0);
+digitalWrite(d2,0);
+digitalWrite(e2,0);
+digitalWrite(f2,0);
+digitalWrite(g2,1);
+delay(2);
+}
+if(artim2==1)
+{
+digitalWrite(a2,1);
+digitalWrite(b2,0);
+digitalWrite(c2,0);
+digitalWrite(d2,1);
+digitalWrite(e2,1);
+digitalWrite(f2,1);
+digitalWrite(g2,1);
+delay(2);
+}
+if(artim2==2)
+{
+digitalWrite(a2,0);
+digitalWrite(b2,0);
+digitalWrite(c2,1);
+digitalWrite(d2,0);
+digitalWrite(e2,0);
+digitalWrite(g2,0);
+digitalWrite(f2,1);
+delay(2);
+}
+if(artim2==3)
+{
+digitalWrite(a2,0);
+digitalWrite(b2,0);
+digitalWrite(c2,0);
+digitalWrite(d2,0);
+digitalWrite(e2,1);
+digitalWrite(f2,1);
+digitalWrite(g2,0);
+delay(2);
+}
+if(artim2==4)
+{
+digitalWrite(a2,1);
+digitalWrite(b2,0);
+digitalWrite(c2,0);
+digitalWrite(d2,1);
+digitalWrite(e2,1);
+digitalWrite(f2,0);
+digitalWrite(g2,0);
+delay(2);
+}
+if(artim2==5)
+{digitalWrite(a2,0);
+digitalWrite(b2,1);
+digitalWrite(c2,0);
+digitalWrite(d2,0);
+digitalWrite(e2,1);
+digitalWrite(f2,0);
+digitalWrite(g2,0);
+
+delay(2);
+}
+if(artim2==6)
+{
+digitalWrite(a2,0);
+digitalWrite(b2,1);
+digitalWrite(c2,0);
+digitalWrite(d2,0);
+digitalWrite(e2,0);
+digitalWrite(f2,0);
+digitalWrite(g2,0);
+delay(2);
+}
+if(artim2==7)
+{
+digitalWrite(a2,0);
+digitalWrite(b2,0);
+digitalWrite(c2,0);
+digitalWrite(d2,1);
+digitalWrite(e2,1);
+digitalWrite(f2,1);
+digitalWrite(g2,1);
+delay(2);
+}
+if(artim2==8)
+{
+digitalWrite(a2,0);
+digitalWrite(b2,0);
+digitalWrite(c2,0);
+digitalWrite(d2,0);
+digitalWrite(e2,0);
+digitalWrite(f2,0);
+digitalWrite(g2,0);
+delay(2);
+}
+if(artim2==9)
+{
+digitalWrite(a2,0);
+digitalWrite(b2,0);
+digitalWrite(c2,0);
+digitalWrite(d2,0);
+digitalWrite(e2,1);
+digitalWrite(f2,0);
+digitalWrite(g2,0);
+delay(2);
+}
+if(artim3==0)
+{
+digitalWrite(a3,0);
+digitalWrite(b3,0);
+digitalWrite(c3,0);
+digitalWrite(d3,0);
+digitalWrite(e3,0);
+digitalWrite(f3,0);
+digitalWrite(g3,1);
+delay(2);
+}
+if(artim3==1)
+{
+digitalWrite(a3,1);
+digitalWrite(b3,0);
+digitalWrite(c3,0);
+digitalWrite(d3,1);
+digitalWrite(e3,1);
+digitalWrite(f3,1);
+digitalWrite(g3,1);
+delay(2);
+}
+if(artim3==2)
+{
+digitalWrite(a3,0);
+digitalWrite(b3,0);
+digitalWrite(c3,1);
+digitalWrite(d3,0);
+digitalWrite(e3,0);
+digitalWrite(g3,0);
+digitalWrite(f3,1);
+delay(2);
+}
+if(artim3==3)
+{
+digitalWrite(a3,0);
+digitalWrite(b3,0);
+digitalWrite(c3,0);
+digitalWrite(d3,0);
+digitalWrite(e3,1);
+digitalWrite(f3,1);
+digitalWrite(g3,0);
+delay(2);
+}
+if(artim3==4)
+{
+digitalWrite(a3,1);
+digitalWrite(b3,0);
+digitalWrite(c3,0);
+digitalWrite(d3,1);
+digitalWrite(e3,1);
+digitalWrite(f3,0);
+digitalWrite(g3,0);
+delay(2);
+}
+if(artim3==5)
+{digitalWrite(a3,0);
+digitalWrite(b3,1);
+digitalWrite(c3,0);
+digitalWrite(d3,0);
+digitalWrite(e3,1);
+digitalWrite(f3,0);
+digitalWrite(g3,0);
+
+delay(2);
+}
+if(artim3==6)
+{
+digitalWrite(a3,0);
+digitalWrite(b3,1);
+digitalWrite(c3,0);
+digitalWrite(d3,0);
+digitalWrite(e3,0);
+digitalWrite(f3,0);
+digitalWrite(g3,0);
+delay(2);
+}
+if(artim3==7)
+{
+digitalWrite(a3,0);
+digitalWrite(b3,0);
+digitalWrite(c3,0);
+digitalWrite(d3,1);
+digitalWrite(e3,1);
+digitalWrite(f3,1);
+digitalWrite(g3,1);
+delay(2);
+}
+if(artim3==8)
+{
+digitalWrite(a3,0);
+digitalWrite(b3,0);
+digitalWrite(c3,0);
+digitalWrite(d3,0);
+digitalWrite(e3,0);
+digitalWrite(f3,0);
+digitalWrite(g3,0);
+delay(2);
+}
+if(artim3==9)
+{
+digitalWrite(a3,0);
+digitalWrite(b3,0);
+digitalWrite(c3,0);
+digitalWrite(d3,0);
+digitalWrite(e3,1);
+digitalWrite(f3,0);
+digitalWrite(g3,0);
+delay(2);
+}
+
+
+
+
+
+
+
+
+
+
+}
+
+void carptimi(int arackonumx,int arackonumy,int nesnex,int nesney)
+{
+Serial.println(arackonumx);
+Serial.println(arackonumy);
+Serial.println(nesnex);
+Serial.println(nesney);
+
+if(dokunulmaz==0)//bu kısım önemli
+{
+
+Serial.println("........................");
+//sesyap=0;
+if(arackonumx==nesnex)
+{
+  if(arackonumy==nesney)
+  {int birkez=0;
+  
+   sesyap=1;
+
+if(kalp3pinyan==1&&birkez==0)
+{birkez++;
+  kalp3pinyan=0;
+}
+if(kalp2pinyan==1&&birkez==0)
+{birkez++;
+  kalp2pinyan=0;
+}
+if(kalp1pinyan==1&&birkez==0)
+{
+birkez++;
+  kalp1pinyan=0;
+}
+
+
+  }
+}
+
+}
+   
+
+}
+
+
+
+
+
+
+//odulpuan yedek can sağlar
+void odulpuanal(int arackonumx,int arackonumy,int nesnex,int nesney)
+{
+  if(odulpuancarp==1)
+  {
+
+if(arackonumx==nesnex)
+{
+  if(arackonumy==nesney)
+  {
+  
+  
+  
+sesyap=1;
+
+  if(kalp1pinyan==1||kalp2pinyan==1||kalp3pinyan==1)
+  {
+  int ikikezkez=0;
+  
+   
+
+if(kalp1pinyan==0&&ikikezkez<2)
+{ikikezkez++;
+  kalp1pinyan=1;
+}
+if(kalp2pinyan==0&&ikikezkez<2)
+{ikikezkez++;
+  kalp2pinyan=1;
+}
+if(kalp3pinyan==0&&ikikezkez<2)
+{
+ikikezkez++;
+  kalp3pinyan=1;
+}
+
+if(kalp1pinyan==1&&kalp2pinyan==1&&kalp3pinyan==1&&ikikezkez<2)
+{
+  canhakki++;
+  ikikezkez++;
+}
+if(kalp1pinyan==1&&kalp2pinyan==1&&kalp3pinyan==1&&ikikezkez<2)
+{
+  canhakki++;
+  ikikezkez++;
+}
+  }
+
+  if(kalp1pinyan==0&&kalp2pinyan==0&&kalp3pinyan==0)
+  {
+  int birkezkez=0;
+  
+   
+
+if(kalp1pinyan==0&&birkezkez==0)
+{ birkezkez++;
+  kalp1pinyan=1;
+}
+if(kalp2pinyan==0&&birkezkez==0)
+{birkezkez++;
+  kalp2pinyan=1;
+}
+if(kalp3pinyan==0&&birkezkez==0)
+{
+birkezkez++;
+  kalp3pinyan=1;
+}
+
+
+  }
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+}
+}
+
+odulpuancarp=0;
+   
+
+}
+
+
+
+
+
+
+
+
+
+void her14engel()
+{
+
+
+
+
+
+
+
+
+
+
+/*
+int kontrolet=engel14hakki-oncekiengel14kki;
+if(kontrolet-oncekiengel14hakki)
+{ int birkez=0;
+  if(kalp3pinyan==0&&birkez==0)
+  {birkez++;
+    kalp3pinyan=1;
+  }
+  if(kalp2pinyan==0&&birkez==0)
+  {birkez++;
+   kalp2pinyan=1;
+  }
+  if(kalp1pinyan==0&&birkez==0)
+  {kalp1pinyan=1;
+  birkez++;
+  }
+
+
+
+}
+oncekiengel14hakki=engel14hakki;
+*/
+
+}
+
+
+
+void dokunulmazlikal(int arackonumx,int arackonumy,int nesnex,int nesney)
+{
+
+if(dokunulmazlik3sn==1)
+{
+if(arackonumx==nesnex)
+{
+  if(arackonumy==nesney)
+  {
+  
+   sesyap=1;
+Serial.println("DDDOOOOKUUUUUUNUULLLMMMMAAAAZZZ***********---------");
+delay(5000);
+dokunulmaz=1;
+
+
+}
+
+
+
+}
+
+}
+dokunulmazlik3sn=0;
+
+
+}
+
+
+void dokunulmazlikmatrissifirla()
+{
+
+for(int i=0;i<5;i++)
+{
+  for(int j=0;j<8;j++)
+  {
+    dokunulmazlikmatris[i][j]=0;
+  }
+}
+
+
+}
